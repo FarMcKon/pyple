@@ -12,5 +12,6 @@ If you do run 'init' you can create a config file (stored at ~/.pyple) to specif
 
 
 # See Also 
-#vobject 0.8.1c
-#dulwich
+vobject 0.8.1c
+dulwich
+ppl: http://news.ycombinator.com/item?id=4947047
