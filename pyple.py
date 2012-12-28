@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import ( unicode_literals, print_function, with_statement, absolute_import )
 
+import subprocess
 import glob
 import optparse
 import sys
@@ -27,60 +28,63 @@ def has_config_file(configFilename=None):
 
 
 def dict_from_vcard(vcard):
-    """ loads a vcard into a well defined dict"""
+    """ loads a dictionary with *select* vcard info. NOTE: this does not
+    load *all* vcard data, since that can be a bit batshit complex. It only
+    loads some key values. Keep the origional vcard around to merge values back 
+    into it, or you *will lose data* esp for complex or edge-case data"""
     retDict = {}
-    # load fullname
-    try:
-        # vobject has a dumb error-prone lookup system
-        retDict['fullname'] = vcard.fn.value
-    except AttributeError as e:
-        retDict['fullname'] = None 
+    # some VCARD keys are damm crpytic. Rekey them
+    rekeyings= (('fullname','fn'),('name','n'),('address','adr'))
+    for key in vcard.__dict__['contents'].keys():
+        
+        #get our sub vCardObj, throwing errors as needed
+        if len(vcard.__dict__['contents'][key]) == 0:
+            raise Exception("emtpy vcard key %s" %key)
+        if len(vcard.__dict__['contents'][key]) > 1:
+            print("WARNING: More than one entry for vcard key %s" %key)
+        vCardObj = vcard.__dict__['contents'][key][0]
 
-    #load split name
-    try:
-        retDict['name'] = {}
-        # vobject has a dumb error-prone lookup system
-        x = vcard.n.value
-        retDict['name']['given'] = x.given
-        retDict['name']['family'] = x.family 
-        retDict['name']['additional'] = x.additional 
-        retDict['name']['prefix'] = x.prefix 
-        retDict['name']['suffix'] = x.suffix 
-    except AttributeError as e:
-        # if any key fales, vcard.n.value is invalid, overwrite all of it
-        #retDict['name'] = {}
-        #retDict['name']['given'] = None
-        #retDict['name']['family'] = None
-        #retDict['name']['additional'] = None
-        #retDict['name']['prefix'] = None
-        #retDict['name']['suffix'] = None
-        print("failure to doecde complex name") 
-    try:
-        #import pdb
-        #pdb.set_trace()
-        # vobject has a dumb error-prone lookup system
-        a = vcard.adr.value 
-        retDict['address'] = {}
-        retDict['address']['street'] = a.street
-        retDict['address']['city'] = a.city
-        retDict['address']['region'] = a.region
-        retDict['address']['code'] = a.code
-        retDict['address']['country'] = a.country
-        #retDict['address']['z'] = a.z
-    except AttributeError as e:
-        print("failure to decode/discover/unconver address")
+        #unpack data out of the vcard objects
+        unpackedData = None
+        #raw string value, thank god
+        if type(vCardObj.value) == type('str'):
+            unpackedData = vCardObj.value 
+        elif type(vCardObj.value) == vobject.vcard.Name:
+            unpackedData = {}
+            unpackedData['given'] = vCardObj.value.given
+            unpackedData['family'] = vCardObj.value.family 
+            unpackedData['additional'] = vCardObj.value.additional 
+            unpackedData['prefix'] = vCardObj.value.prefix 
+            unpackedData['suffix'] = vCardObj.value.suffix 
+        elif type(vCardObj.value) is vobject.vcard.Address:
+            unpackedData = {}
+            a = vCardObj.value 
+            unpackedData['street'] = a.street
+            unpackedData['city'] = a.city
+            unpackedData['region'] = a.region
+            unpackedData['code'] = a.code
+            unpackedData['country'] = a.country
+        elif type(vCardObj.value) is list :
+            unpackedData = vCardObj.value
+        else:
+            print("ohhhh! new datatype. We need to investigate!")
+            import pdb
+            pdb.set_trace()
+        #panic if we have no data
+        if unpackedData == None:
+            import pdb
+            pdb.set_trace()
+            raise Exception("We do not know how to unpack key %s" %key)
 
-    try:
-      retDict['email'] = vcard.email.value
-    except AttributeError as e:
-        print("failure to decode/discover/unconver email")
+        #outKey is our output key, it may be remapped
+        outKey = key
+        newkeys,oldkeys = zip(*rekeyings)
+        if key in oldkeys:
+            idx = oldkeys.index(key) 
+            outKey = newkeys[idx]
+        retDict[outKey] = unpackedData 
 
-    try:
-      retDict['org'] = vcard.org.value
-    except AttributeError as e:
-        print("failure to decode/discover/unconver org")
-
-    #TODO: contine to extend this for addr, nickname
+   #TODO: contine to extend this for addr, nickname
     # and other values 
     print("TODO: extend this to other key values")
     return retDict 
@@ -89,7 +93,7 @@ def shitty_cc_parse(addrLine):
     """Parses out countrycode from addressline
     @returns tuple of (reminingAddr, countrycode)"""
     shitty_cc = '(?P<cc>[a-zA-Z]{2,5})'
-    shitty_break = "\s*[.,]\s*$"
+    shitty_break = "\s*?[.,]?\s*$"
     se = re.compile(shitty_cc + '$')
     cc = 'US'
     if se:
@@ -118,8 +122,6 @@ def shitty_zip_parse(addrLine):
             rest = addrLine[:grp.start()]
             # clear off the comma, and break chars
             grp2 = re.search(shitty_break,rest)
-            #import pdb
-            #pdb.set_trace()
             if grp2:
                 rest = rest[:grp2.start()]
             return (rest, zip)
@@ -141,8 +143,6 @@ def shitty_citystate_parse(addrLine):
             rest = addrLine[:grp.start()] 
             # clear off the comma, and break chars
             grp2 = re.search(shitty_break,rest)
-            #import pdb
-            #pdb.set_trace()
             if grp2:
                 rest = rest[:grp2.start()]
             return (rest, city, state)
@@ -199,13 +199,16 @@ def shitty_addr_parser(addrLine):
     #shitty_addr_regex = "\s+,?\s+(?P<name>[1-9]{5})"
     #re.search("(?P<city>\w{2}|\w{3,6})\s+(?P<name>[1-9]{5})",ad).groupdict()
 
-def vcard_from_dict(dict):
-    """ loads a dict from a well defined vcard"""
-    # assumes a well defined dict passed in
+
+def vcard_merge_in_dict(dict, vCard):
+    """ merges a well-specified dictionary of data into the passed v-card"""
+    #Since vcard can be complex, we expect you are updating an existing vcard
+    #with dict values,  or maybe you created a fresh blank one to  pass us"
+    #Assumes a well defined dict passed in
     # fullname: single string, full name. fullname generated from other name 
     #strings if this is not defined
     # name : a dict, may contain 'given , middle, family' as keys or more
-    final_fn = 'fail'
+    rfinal_fn = 'fail'
     final_given= None
     final_family = None
     final_other = 'fail_firstname'
@@ -222,35 +225,39 @@ def vcard_from_dict(dict):
     elif 'nick' in dict.keys():
         final_fn = 'nick'
     else:
+        import pdb
+        pdb.set_trace()
         raise Exception("Total Name Failure")
         # TODO: smater fallback generation
-    vcard = vobject.vCard()
-    vcard.add('fn')
-    vcard.fn.value = final_fn
-    vcard.add('n')
+    #TODO: only add keys if it's not found
+    if 'fn' not in vCard.__dict__['contents'].keys():
+        vCard.add('fn')
+    vCard.fn.value = final_fn
+    if 'n' not in vCard.__dict__['contents'].keys():
+        vCard.add('n')
     #TODO: SMARTER NAME OBJECT GENERATION
     vNameObj = vobject.vcard.Name(final_nick)
     if final_given is not None and final_family is not None:
         vNameObj = vobject.vcard.Name(family=final_family, given=final_given)
-        vcard.n.value = vNameObj 
+        vCard.n.value = vNameObj 
     
     if 'address' in dict.keys():
         addr_dict = dict['address']
         if addr_dict != {}:
-            vcard.add('adr')
-            #import pdb
-            #pdb.set_trace()
+            if 'adr' not in vCard.__dict__['contents'].keys():
+                vCard.add('adr')
             vAddrObj = vobject.vcard.Address(addr_dict['street'],addr_dict['city'],
                 addr_dict['region'],addr_dict['code'], addr_dict['country'])
-            vcard.adr.value= vAddrObj
+            vCard.adr.value= vAddrObj
 
     if 'email' in dict.keys():
-        vcard.add('email')
-        vcard.email.value = dict['email']
+        if 'email' not in vCard.__dict__['contents'].keys():
+            vCard.add('email')
+        vCard.email.value = dict['email']
     if 'org' in dict.keys():
-        vcard.add('org')
-        vcard.org.value = dict['org']
-    return vcard 
+        if 'org' not in vCard.__dict__['contents'].keys():
+            vCard.add('org')
+        vCard.org.value = dict['org'] #org is a list?  not well doc'd
 
 def get_config() :
     """ load config, assuming it exists. If no config, sets
@@ -326,14 +333,16 @@ def vcard_dir_init(cmd, paramLine):
                #no dir exists, do a simple git clone 
                 print("settings vcard dir %s to track git remote %s" 
                       %(config['vcard_dir'], config['remote']))
-                cmd2 = 'git clone '+ config['remote'] +' '+ config['vcard_dir'] 
-                os.system(cmd2) #FUTURE: make less of a giant os security hole
+                cmd2 = ['git','clone',config['remote'], config['vcard_dir'] ]
+                subprocess.call(cmd2)#FUTURE: make less of a giant os security hole
+                #os.system(cmd2) #FUTURE: make less of a giant os security hole
             else:
                 print("cannot git init an existing dir yet. Sorry :( ")
                 print("directory %s already exists" %config['remote'])
                 return False
                 #FUTURE: be smart, and init over the existing dir anyway
                 #cmd = 'git init ' + config['vcard_dir']
+                #subprocess.call(cmd2)#FUTURE: make less of a giant os security hole
                 #os.system(cmd) #FUTURE: make less of a giant os security hole
 
 def cd_vcard_dir():
@@ -355,19 +364,23 @@ def vcard_dir_sync(cmd, paramLine):
         import pdb
         pdb.set_trace()
         oldcwd = cd_vcard_dir()
-        cmd = 'git pull' 
-        os.system(cmd)
+        cmd = ['git','pull' ]
+        #os.system(cmd)
         #add all vcf files
         files = glob.glob(config['vcard_dir']+'/*.vcf')
-        cmd = 'git add ' + ' '.join(files) 
-        os.system(cmd)
+        cmd = ['git','add']
+        cmd.extend(files)
+        subprocess.call(cmd)
+        #os.system(cmd)
         #make with the push
         import datetime
         dtString = str(datetime.datetime.now())
-        cmd = 'git commit --message="pyple v%s autocommit on %s"' %(__version__, dtString)
-        os.system(cmd)
-        cmd = 'git push origin master'
-        os.system(cmd)
+        cmd = ['git','commit','--message="pyple v%s autocommit on %s"' %(__version__, dtString)]
+        #os.system(cmd)
+        subprocess.call(cmd)
+        cmd = 'git','push','origin','master'
+        subprocess.call(cmd)
+        #os.system(cmd)
         os.chdir(oldcwd)
         #FUTURE: we could use a lot better error tracking, etc here
         return True
@@ -415,7 +428,13 @@ def whois(cmd, paramLine):
             print("ERROR: old nickname %s does not exist at %s" 
                   %(nick, nick_fn) )
             return True
-    vCard = getvcard(nick_fn)
+    allVcards = get_all_vcard_elements(nick_fn)
+    if len(allVcards) == 0:
+        raise Exception("No vcards in nick file !" %nick_fn)
+    if len(allVcards) > 1:
+        raise Exception("Multiple Vcards in one file. We are too stupid to hadle this!")
+    vCard = allVcards[0]
+    #vCard = getvcard(nick_fn)
 
     infoDict = dict_from_vcard(vCard)
     for k in infoDict.keys():
@@ -465,7 +484,22 @@ def getvcard(vcard_fn):
         rawdata = fh.read()
         #TODO: handle error or fail cases better
         vCard = vobject.readOne(rawdata)
+        #to read many entries per vcard, use 'get_all_vcard_elements' below
     return vCard 
+
+def get_all_vcard_elements(vcard_fn):
+    """Loads and returns  a list of all vcard elements in the specified file.
+    @returns a list of all VCARD entries in the specified file. Empty list of no vcard in file
+    """
+    vCardList = []
+    with open(vcard_fn,'rb') as fh:
+        rawdata = fh.read()
+        #TODO: handle error or fail cases better
+        for obj in vobject.readComponents():
+            if obj.name() == 'VCARD':
+               vCardList.append(obj)
+    return vCardList 
+
 
 
 def vcard_mv(cmd, paramLine):
@@ -545,12 +579,13 @@ def add_org(cmd, paramLine):
     vcard_fn = os.path.join(config['vcard_dir'] ,vcard_fn)
     vCard = getvcard(vcard_fn)
     infoDict = dict_from_vcard(vCard)
-    
-    infoDict['org'] = org
+   
+
+    infoDict['org'] = [org,] #list-ize. Dunnow why yet
 
     ## make changes to infodict here
-    newVCard = vcard_from_dict(infoDict)
-    rawdata = newVCard.serialize()
+    vcard_merge_in_dict(infoDict,vCard)
+    rawdata = vCard.serialize()
     with open(vcard_fn,'w+') as fh:
         fh.write(rawdata)
     return True
@@ -577,8 +612,8 @@ def add_email(cmd, paramLine):
     
 
     ## make changes to infodict here
-    newVCard = vcard_from_dict(infoDict)
-    rawdata = newVCard.serialize()
+    vcard_merge_in_dict(dict,vCard)
+    rawdata = vCard.serialize()
     with open(vcard_fn,'w+') as fh:
         fh.write(rawdata)
  
@@ -613,7 +648,8 @@ def add_addr(cmd, paramLine):
     infoDict['address'] = addrDict
    
     # geneate our new vcard
-    newVCard = vcard_from_dict(infoDict)
+    newVCard = vobject.vCard()
+    vcard_from_dict(dict,newVCard)
     rawdata = newVCard.serialize()
     with open(vcard_fn,'w+') as fh:
         fh.write(rawdata)
