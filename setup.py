@@ -1,4 +1,4 @@
-# setup.py for pyple 
+# setup.py for pypeople 
 #
 # Direct install (all systems):
 #   "python setup.py install"
@@ -46,18 +46,18 @@ if sys.version < '2.3':
 #~ version = serial.VERSION
 
 if sys.version >= '2.3' and sys.version < '3.0':
-  import pyple 
-  version = pyple.__version__
+  import pypeople 
+  version = pypeople.__version__
 
 elif sys.version >= 3.0:
   import re, os
   version = re.search(
         "__version__.*'(.+)'",
-        open(os.path.join('pyple', '__init__.py')).read()).group(1)
+        open(os.path.join('pypeople', '__init__.py')).read()).group(1)
 
 
 setup(
-    name = "pyple" + suffix,
+    name = "pypeople" + suffix,
     description = "Commandline vCard editor in Python, with git syncing",
     version = version,
     author = "Far McKon",
