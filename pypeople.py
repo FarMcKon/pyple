@@ -23,7 +23,7 @@ def is_valid_config_json(rawData):
 #@memoize
 def has_config_file(configFilename=None):
     """ quick check for config file existing. """
-    file = configFilename if configFilename else '~/.pyple'
+    file = configFilename if configFilename else '~/.pypeople'
     return os.path.isfile(os.path.expanduser(file))
 
 
@@ -266,7 +266,7 @@ def get_config() :
     if _g_config != None:
         return _g_config #already loaded, reuse singleton
 
-    cfg_file = '~/.pyple'
+    cfg_file = '~/.pypeople'
     if not has_config_file(cfg_file):
         _g_config = {}
         _g_config['vcard_dir'] = os.getcwd()
@@ -286,7 +286,7 @@ def get_config() :
 def __help(cmd, paramLine):
     """Print a help menu for the user"""
     print('help (aka %s) called with %s' %(cmd, paramLine) ) 
-    print('pyple: Command line tool for vcard management, with git backend')
+    print('pypeople: Command line tool for vcard management, with git backend')
     print('Version: ' + __version__ )
     print("Available Commands:")
     for cmd in availSubCmds.keys():
@@ -313,7 +313,7 @@ def vcard_dir_init(cmd, paramLine):
     import pdb
     pdb.set_trace()
     config['vcard_dir'] = os.path.abspath(os.path.expanduser(dir))
-    config['cfg_file'] = os.path.abspath(os.path.expanduser('~/.pyple'))
+    config['cfg_file'] = os.path.abspath(os.path.expanduser('~/.pypeople'))
     config['cfg_version'] = __version_info__
     config['remote'] = None
 
@@ -375,7 +375,7 @@ def vcard_dir_sync(cmd, paramLine):
         #make with the push
         import datetime
         dtString = str(datetime.datetime.now())
-        cmd = ['git','commit','--message="pyple v%s autocommit on %s"' %(__version__, dtString)]
+        cmd = ['git','commit','--message="pypeople v%s autocommit on %s"' %(__version__, dtString)]
         #os.system(cmd)
         subprocess.call(cmd)
         cmd = 'git','push','origin','master'

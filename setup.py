@@ -1,10 +1,11 @@
-# setup.py for pypl 
+# setup.py for pyple 
 #
 # Direct install (all systems):
 #   "python setup.py install"
 #
 # For Python 3.x use the corresponding Python executable,
 # e.g. "python3 setup.py ..."
+from __future__ import ( unicode_literals, with_statement, absolute_import )
 
 #New Hotness for distrbuting
 from distribute_setup import use_setuptools
@@ -45,23 +46,23 @@ if sys.version < '2.3':
 #~ version = serial.VERSION
 
 if sys.version >= '2.3' and sys.version < '3.0':
-  import pypl 
-  version = pypl.__version__
+  import pyple 
+  version = pyple.__version__
 
 elif sys.version >= 3.0:
   import re, os
   version = re.search(
         "__version__.*'(.+)'",
-        open(os.path.join('pypl', '__init__.py')).read()).group(1)
+        open(os.path.join('pyple', '__init__.py')).read()).group(1)
 
 
 setup(
-    name = "pypl" + suffix,
+    name = "pyple" + suffix,
     description = "Commandline vCard editor in Python, with git syncing",
     version = version,
     author = "Far McKon",
     author_email = "farMcKon@gmail.com",
-    url = "http://github.com/farmckon/pypl",
+    url = "http://github.com/farmckon/pyple",
     packages = find_packages(),
     license = "AGPL",
     long_description = "Commandline vcard editor for address book management, written in Python",
@@ -69,7 +70,7 @@ setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',
-        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
+        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
         'Natural Language :: English',
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
