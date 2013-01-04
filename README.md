@@ -11,8 +11,8 @@ PyPeople makes it easy to create or edit vcf files. If you don't have a ~/.pypeo
 If you do run 'init' you can create a config file (stored at ~/.pypeople) to specify a vCard contact directory, and an optional git repository to sync contacts to/from.
 
 ## help
-   pypeople help 
-Displays help commands for the most common usage
+    pypeople help 
+Displays help commands for the most common commands
 
 ## init 
     pypeople init ~/Contacts
@@ -23,9 +23,17 @@ f you never run this command, pypeople will assume the directroy you are in is y
  
 ## add  
     pypeople add jrand "J Random Hack"
-Creates a vcard 'jrand' containing the name (and email/phone if specified) entered.
+    pypeople add jrand "J Random Hack" jrand@eample.org 555-123-4567
+Creates a vcard 'jrand.vcf' in your contacts directory containing the name (and email/phone if specified) entered. If you have never run init, pypeople will assume your contacts are in the directory it is running in.  If a card of that name exists, you will get an error
+
+## addr
+    pypeople addr jrand "5000 Some St, Broolyn NY 14554"
+    pypeople addr jrand 5000 Some St, Broolyn NY 14554
+
+Adds an address to the vcard for jrand.  We have simple US address parsing, other addresses may be (sorry) a bit mangled
 
 
 ## See Also 
-vobject 0.8.1c
-dulwich
+This project uses vobject[http://pypi.python.org/pypi/vobject/0.8.1c] for vcard parsing.
+
+In the future we hope to use dulwich[http://pypi.python.org/pypi/dulwich/0.8.7] for git interaction
