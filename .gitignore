@@ -1,0 +1,6 @@
+.DS_store
+.coverage
+dist
+build
+*.pyc
+pypeople/*.pyc

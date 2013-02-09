@@ -305,6 +305,28 @@ def __help(cmd, paramLine):
         helptxt = availSubCmds[cmd].__doc__ if availSubCmds[cmd].__doc__ else 'Undocumented'
         print('\t'+str(cmd) +':\t ' + helptxt)
 
+def vcard_find(cmd, paramLine):
+    """Find a nickname based on a name/string/something as part of the vcard"""
+    if len(paramLine) == 0:
+        print(vcard_find.__doc__)
+        return
+    if len(paramLine) > 0:
+        regStr = ' '.join(paramLine)
+        config = get_config()
+        # no options, just print all 
+        matches = []
+        files = glob.glob(config['vcard_dir']+'/*.vcf')
+        for f in files:
+            with open(f, "r") as fh:
+                data = fh.read() 
+                match = re.search(re.escape(regStr), data,re.IGNORECASE)
+                if match != None:
+                    nick = f[len(config['vcard_dir'])+1:-4] #strip dir portions
+                    print(nick)
+                    matches.append(nick)
+            
+        print( ',\t'.join(matches) )
+                    
 def vcard_dir_init(cmd, paramLine):
     """Create/Update a config file. 'init <dir_of_vfc> [remote repo]' """
     print('init (aka %s) called with %s' %(cmd, paramLine) )
@@ -788,6 +810,7 @@ if __name__ == '__main__':
         'org': add_org,
         'help':  __help,
         'sync':vcard_dir_sync,
+        'find':vcard_find,
     }
     
 

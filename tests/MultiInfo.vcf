@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Foo;Bar;;;
+FN:Bar Foo
+EMAIL;type=INTERNET;type=HOME;type=pref:fooer.metasynt@gmail.com
+EMAIL;type=INTERNET;type=WORK:fooer@jigsawrenaissance.org
+TEL;type=CELL;type=pref:(812) 219-4056
+item1.ADR;type=HOME;type=pref:;;115 10nd ave #1708;Seattle;WA;98101;
+item1.X-ABADR:us
+item2.URL;type=pref:http\://twitter.com/fooermetasynt
+item2.X-ABLabel:_$!<HomePage>!$_
+item3.URL:http\://sss.imul.ly
+item3.X-ABLabel:H+ wiki
+item4.URL:http\://jigsawrenaissance.org
+item4.X-ABLabel:nonprofit maker space
+X-ABUID:A31CC827-AAC1-4D43-B153-7CEBA81CDBDE\:ABPerson
+END:VCARD

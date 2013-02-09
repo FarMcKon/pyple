@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Joe Hacker 2
+N:Joe;Hacker2;;;
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Joe Hacker
+N:Joe;Hacker;;;
+END:VCARD
