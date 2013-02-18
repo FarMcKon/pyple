@@ -7,18 +7,19 @@
 # e.g. "python3 setup.py ..."
 from __future__ import ( unicode_literals, with_statement, absolute_import )
 
+
 #New Hotness for distrbuting
-from distribute_setup import use_setuptools
-use_setuptools()
+try:
+    from distribute_setup import use_setuptools
+    use_setuptools()
+    from setuptools import setup, find_packages
+except ImportError:
+    from setuptools import setup
 
 #old bustedness for distrubtiong
-#from ez_setup import use_setuptools
-#use_setuptools()
 
 import sys
 
-from distutils.core import setup
-from setuptools import setup, find_packages
 
 if sys.version_info >= (3, 0):
     try:
@@ -30,7 +31,7 @@ if sys.version_info >= (3, 0):
 else:
     from distutils.command.build_py import build_py
     from distutils.command.build_scripts import build_scripts
-    suffix = ""
+    suffix ='' 
 
 
 if sys.version < '2.3':
@@ -45,17 +46,13 @@ if sys.version < '2.3':
 #~ import serial
 #~ version = serial.VERSION
 
-if sys.version >= '2.3' and sys.version < '3.0':
-  import pypeople 
-  version = pypeople.__version__
-
-elif sys.version >= 3.0:
+if sys.version >= '2.3':
+  #import pypeople  version = pypeople.__version__ 
+  ##^ causes some kind of dependnecy-implosion on some systems
   import re, os
   version = re.search(
         "__version__.*'(.+)'",
-        open(os.path.join('pypeople', '__init__.py')).read()).group(1)
-
-
+        open(os.path.join('pypeople','pypeople.py')).read()).group(1)
 setup(
     name = "pypeople" + suffix,
     description = "Commandline vCard editor in Python, with git syncing",
@@ -64,6 +61,11 @@ setup(
     author_email = "farMcKon@gmail.com",
     url = "http://github.com/farmckon/pyple",
     packages = find_packages(),
+    install_requires=['vobject>=0.7',],
+    #dependency_links = ['http://pypi.python.org/pypi/vobject'],
+    #packages= ['pypeople',],
+    #package_dir={'pypeople': 'pypeople'},
+    #package_data={'pypeople': ['*.py']},
     license = "AGPL",
     long_description = "Commandline vcard editor for address book management, written in Python",
     classifiers = [
@@ -89,6 +91,5 @@ setup(
     ],
     platforms = 'any',
     cmdclass = {'build_py': build_py, 'build_scripts': build_scripts},
-
     #scripts = ['serial/tools/miniterm.py'],
 )

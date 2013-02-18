@@ -167,6 +167,7 @@ def shitty_addr_parser(addrLine):
     shitty_city = '(P<city>\w+)' #won't handle St. Foobra, or other cities
                             #with breaks. Shitty, no? 
     final_zip = None
+    shitty_zip = '(?P<zip>\d{5})'
     #FUTURE: pull countrycode off the end
     #ma = re.compile(shitty_cc + '$') 
     addrLeft = addrLine
@@ -188,26 +189,35 @@ def shitty_addr_parser(addrLine):
 
 def shitty_addr_parser(addrLine):
     """shitty address parser. Assumes US always"""
-    shitty_state = '(P<st>\w[.,]?{2}|\w{3,6})'
+    shitty_state = '(?P<st>\s([a-zA-Z][.,]?){2}(\s|,))'
     shitty_break = '\s*,?\s+'
-    shitty_city = '(P<city>\w+)' #won't handle St. Foobra, or other cities
+    shitty_city = '(?P<city>\w+)' #won't handle St. Foobra, or other cities
                             #with breaks. Shitty, no? 
-    final_zip = None
+    shitty_zip = '(?P<zip>\d{5})'
     #FUTURE: pull countrycode off the end
     #ma = re.compile(shitty_cc + '$') 
     addrLeft = addrLine
     ma = re.compile(shitty_zip + '$')
     grp = ma.search(addrLeft)
     if grp:
-        final_zip = grp.groupdict['cc']
-        addrLeft = addrLeft[:grp.span()[1]] 
+        final_zip = grp.groupdict()['zip']
+        addrLeft = addrLeft[:grp.span()[0]] 
     else:
         final_zip = ''
         #addrLeft unmutilated
 
+    grp = None
     ma = re.compile(shitty_state)
+    grp = ma.search(addrLeft)
+    if grp:
+        final_state = grp.groupdict()['st']
+        addrLeft = addrLeft[:grp.span()[0]] 
+        import pdb
+        pdb.set_trace()
+    else:
+        final_state = ''
 
-    #shitty_addr_regex = "\s+,?\s+(?P<name>[1-9]{5})"
+    shitty_addr_regex = "\s+,?\s+(?P<name>[1-9]{5})"
     #re.search("(?P<city>\w{2}|\w{3,6})\s+(?P<name>[1-9]{5})",ad).groupdict()
 
 
@@ -295,9 +305,9 @@ def get_config() :
     print("unspecified load config error")
     return None 
 
-def __help(cmd, paramLine):
+def __help(cmd, *args):
     """Print a help menu for the user"""
-    print('help (aka %s) called with %s' %(cmd, paramLine) ) 
+    print('help (aka %s) called with %s' %(cmd, args) ) 
     print('pypeople: Command line tool for vcard management, with git backend')
     print('Version: ' + __version__ )
     print("Available Commands:")
@@ -305,13 +315,15 @@ def __help(cmd, paramLine):
         helptxt = availSubCmds[cmd].__doc__ if availSubCmds[cmd].__doc__ else 'Undocumented'
         print('\t'+str(cmd) +':\t ' + helptxt)
 
-def vcard_find(cmd, paramLine):
+def vcard_find(cmd, *args):
     """Find a nickname based on a name/string/something as part of the vcard"""
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print(vcard_find.__doc__)
         return
-    if len(paramLine) > 0:
-        regStr = ' '.join(paramLine)
+    if len(args) > 0:
+        import pdb
+        pdb.set_trace()
+        regStr = ' '.join(args)
         config = get_config()
         # no options, just print all 
         matches = []
@@ -327,19 +339,19 @@ def vcard_find(cmd, paramLine):
             
         print( ',\t'.join(matches) )
                     
-def vcard_dir_init(cmd, paramLine):
+def vcard_dir_init(cmd, *args):
     """Create/Update a config file. 'init <dir_of_vfc> [remote repo]' """
-    print('init (aka %s) called with %s' %(cmd, paramLine) )
+    print('init (aka %s) called with %s' %(cmd, args) )
     dir, remote = None, None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print(vcard_dir_init.__doc__)
         print('initalize in dir, pulling from remote_repo as needed ')
         return False
-    if len(paramLine) > 0:  
-        dir = paramLine[0]
-    if len(paramLine) > 1:
-        remote = paramLine[1]
-    if len(paramLine) > 2:
+    if len(args) > 0:  
+        dir = args[0]
+    if len(args) > 1:
+        remote = args[1]
+    if len(args) > 2:
         print ("too many params for init!")
         return False
     config = get_config()
@@ -386,12 +398,12 @@ def cd_vcard_dir():
     return cwd
 
 
-def vcard_dir_sync(cmd, paramLine):
+def vcard_dir_sync(cmd, *args):
     """ sync our vcard file to our remote repo (if one exists) """
 
-    if len(paramLine) == 0:    print( vcard_dir_sync.__doc__)
-    if len(paramLine) >= 1:    
-        print("sync param %s not understood" %paramLine)
+    if len(args) == 0:    print( vcard_dir_sync.__doc__)
+    if len(args) >= 1:    
+        print("sync param %s not understood" %args)
 
     config = get_config()
     if 'remote' in config.keys() and config['remote'] != None:
@@ -430,47 +442,47 @@ def mkdir_p(path):
             raise exc 
 
 
-def vcard_list(cmd, paramLines):
+def vcard_list(cmd, *args):
     """list : Lists all vCards in vcard folder, take a regex someday"""
     config = get_config()
     # no options, just print all 
     files = glob.glob(config['vcard_dir']+'/*.vcf')
     #strip directory and file ending
     nicks = [fname[len(config['vcard_dir'])+1:-4] for fname in files]
-    
-    if len(paramLines) == 0 : 
-       print( ',\t'.join(nicks) )
-    elif len(paramLines) > 0:
-        if paramLines[0] == '--help':
-            print (vcard_list.__doc__)
-            return
-        regStr = ' '.join(paramLines)
-        # try case sensitive first
-        caseMatch = False
-        regObj = re.compile(re.escape(regStr))
-        for nick in nicks:
-            if regObj.search(nick):
-                print(nick)
-                caseMatch = True
-        # no case match, search case insensitive
-        if not caseMatch:
-            regObj = re.compile(re.escape(regStr), re.IGNORECASE)
+    strRet = u''
+    if len(args) == 0 : 
+       strRet +  ',\t'.join(nicks) 
+    elif len(args) > 0:
+        if args[0] == '--help':
+            strRet + vcard_list.__doc__
+        else:
+            regStr = ' '.join(args)
+            # try case sensitive first
+            caseMatch = False
+            regObj = re.compile(re.escape(regStr))
             for nick in nicks:
                 if regObj.search(nick):
-                    print(nick)
-        return 
+                    strRet + nick
+                    caseMatch = True
+            # no case match, search case insensitive
+            if not caseMatch:
+                regObj = re.compile(re.escape(regStr), re.IGNORECASE)
+                for nick in nicks:
+                    if regObj.search(nick):
+                        strRet + nick
+    return strRet
 
-def whois(cmd, paramLine):
+def whois(cmd, *args):
     """whois <nick> display info on a single exact nick """
     nick = None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print(whois.__doc__)
         return False
-    if len(paramLine) > 0:  
-        nick = paramLine[0]
-    if len(paramLine) > 1:  
-       print("too many params")
-       raise Exception("too many params")
+    if len(args) > 0:  
+        nick = args[0]
+    if len(args) > 1:  
+       print("too many params, try single-quote around names")
+       raise Exception("too many params, try single-quote around names")
 
     #load config, 
     config = get_config()
@@ -497,18 +509,17 @@ def whois(cmd, paramLine):
             for subk in infoDict[k]:
                 print( '\t'+ subk + ':' + str(infoDict[k][subk]) )
         else: 
-            print(k + ':' + infoDict[k])
-        
+            print(k + u':' + str(infoDict[k]) )
 
-def vcard_rm(cmd, paramLine):
+def vcard_rm(cmd, *args):
     """rm <nick> delete a vcard file """
     oldnick = None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print( rm.__doc__ )
         return False
-    if len(paramLine) > 0:  
-        oldnick = paramLine[0]
-    if len(paramLine) > 1:  
+    if len(args) > 0:  
+        oldnick = args[0]
+    if len(args) > 1:  
        print("too many params")
        raise Exception("too many params")
 
@@ -556,17 +567,17 @@ def get_all_vcard_elements(vcard_fn):
 
 
 
-def vcard_mv(cmd, paramLine):
+def vcard_mv(cmd, *args):
     """mv <oldnick> <newnick>: move a vcard to a new nickname """
     oldnick = newnick = None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print( mv.__doc__)
         return False
-    if len(paramLine) > 0:  
-        oldnick = paramLine[0]
-    if len(paramLine) > 1:  
-        newnick = paramLine[1]
-    if len(paramLine) > 2:  
+    if len(args) > 0:  
+        oldnick = args[0]
+    if len(args) > 1:  
+        newnick = args[1]
+    if len(args) > 2:  
        print("too many params")
        raise Exception("too many params")
 
@@ -596,15 +607,15 @@ def vcard_mv(cmd, paramLine):
     print("oldnick at %s moved to newnick at %s" %(oldnick_fn, newnick_fn))
 
 
-def undefined(cmd, paramLine):
+def undefined(cmd, *args):
     """Lazy programmer has not written this function"""
-    print('undefined %s called with %s' %(cmd, paramLine) )
+    print('undefined %s called with %s' %(cmd, args) )
 
-#def example(cmd. paramLine):
+#def example(cmd. args):
     #example
     #config = get_config()
-    #if len(paramLine) == 0:    print( add_addr.__doc__)
-    #if len(paramLine) >= 1:    nick = paramLine[0]
+    #if len(args) == 0:    print( add_addr.__doc__)
+    #if len(args) >= 1:    nick = paramLine[0]
     ## other param breakdown here 
     #vcard_fn = nick + '.vcf'
     #vcard_fn = os.path.join(config['vcard_dir'] ,vcard_fn)
@@ -616,17 +627,17 @@ def undefined(cmd, paramLine):
     #with open(vcard_fn,'w+') as fh:
     #    fh.write(rawdata)
 
-def add_org(cmd, paramLine):
+def add_org(cmd, *args):
     """org <nick> <org> add org to an existing vcard"""
 
     config = get_config()
     nick , org = None, None
-    if len(paramLine) == 0:    print( add_org.__doc__)
-    if len(paramLine) >= 1:    
-        nick = paramLine[0]
-    if len(paramLine) >= 2:
-        org = paramLine[1]
-    if len(paramLine) >= 3:
+    if len(args) == 0:    print( add_org.__doc__)
+    if len(args) >= 1:    
+        nick = args[0]
+    if len(args) >= 2:
+        org = args[1]
+    if len(args) >= 3:
         print("only <nick> <org_addr> understood :(")
     # other param breakdown here 
     vcard_fn = nick + '.vcf'
@@ -644,17 +655,17 @@ def add_org(cmd, paramLine):
         fh.write(rawdata)
     return True
 
-def add_phone(cmd, paramLine):
+def add_phone(cmd, *args):
     """phone <nick> <number>:  add phone number string to an existing vcard"""
 
     config = get_config()
     nick , email = None, None
-    if len(paramLine) == 0:    print( add_email.__doc__)
-    if len(paramLine) >= 1:    
-        nick = paramLine[0]
-    if len(paramLine) >= 2:
-        phone = paramLine[1:]
-    if len(paramLine) >= 3:
+    if len(args) == 0:    print( add_email.__doc__)
+    if len(args) >= 1:    
+        nick = args[0]
+    if len(args) >= 2:
+        phone = args[1:]
+    if len(args) >= 3:
         print("phone number ot understood ")
 
     # other param breakdown here 
@@ -672,17 +683,17 @@ def add_phone(cmd, paramLine):
     with open(vcard_fn,'w+') as fh:
         fh.write(rawdata)
  
-def add_email(cmd, paramLine):
+def add_email(cmd, *args):
     """email <nick> <email> add email to an existing vcard"""
 
     config = get_config()
     nick , email = None, None
-    if len(paramLine) == 0:    print( add_email.__doc__)
-    if len(paramLine) >= 1:    
-        nick = paramLine[0]
-    if len(paramLine) >= 2:
-        email = paramLine[1]
-    if len(paramLine) >= 3:
+    if len(args) == 0:    print( add_email.__doc__)
+    if len(args) >= 1:    
+        nick = args[0]
+    if len(args) >= 2:
+        email = args[1]
+    if len(args) >= 3:
         print("only <nick> <email_addr> understood :(")
     # other param breakdown here 
     vcard_fn = nick + '.vcf'
@@ -699,16 +710,16 @@ def add_email(cmd, paramLine):
     with open(vcard_fn,'w+') as fh:
         fh.write(rawdata)
  
-def add_addr(cmd, paramLine):
+def add_addr(cmd, *args):
     """addr <nick> <addr_chunk> : add meatspace address to contact"""
     config = get_config()
     nick = None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print( add_addr.__doc__)
-    if len(paramLine) >= 1:
-        nick = paramLine[0]
-    if len(paramLine) >= 2:
-        addr_list= paramLine[1:]
+    if len(args) >= 1:
+        nick = args[0]
+    if len(args) >= 2:
+        addr_list= args[1:]
     vcard_fn = nick + '.vcf'
     vcard_fn = os.path.join(config['vcard_dir'] ,vcard_fn)
     #print('expecting file at %s' %vcard_fn)
@@ -738,20 +749,20 @@ def add_addr(cmd, paramLine):
  
     return True 
 
-def add_contact(cmd, paramLine):
+def add_contact(cmd, *args):
     """add <nick> ["full name"] [email], [phone]"""
     config = get_config() 
     nick = None
-    if len(paramLine) == 0:
+    if len(args) == 0:
         print( add_contact.__doc__)
-    if len(paramLine) >= 1:
-        nick = paramLine[0]
+    if len(args) >= 1:
+        nick = args[0]
         fulname = nick #fullname fallback
-    if len(paramLine) >= 2:
-        fullname = paramLine[1]
+    if len(args) >= 2:
+        fullname = args[1]
         #print('fullname %s' %fullname)
     else:
-        print("cant handle those params " + str(paramLine))
+        print("cant handle those params " + str(args))
     
     vcard_fn = nick + '.vcf'
     vcard_fn = os.path.join(config['vcard_dir'] ,vcard_fn)
@@ -817,6 +828,8 @@ if __name__ == '__main__':
     if subCmd in availSubCmds.keys():
         if (availSubCmds[subCmd] != None):
             func = availSubCmds[subCmd]
-            result = func(subCmd, cmdRest) 
+            # run the function with unkonwn params. 
+            result = func(subCmd, *cmdRest) 
+            print( result )
     else:
         print("command '%s' not found. try 'help' to list commands" %subCmd)
