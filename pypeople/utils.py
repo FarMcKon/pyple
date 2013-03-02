@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import ( unicode_literals, print_function, with_statement, absolute_import )
 
+from config import * #pypeople config tools
 import subprocess
 import glob
 import optparse
@@ -26,16 +27,6 @@ if __version__ != VERSION and VERSION != '.'.join([str(x) for x in __version_inf
 #__version__ = '.'.join([str(x) for x in __version_info__])
 #VERSION = __version__ 
 
-_g_config = None # for singleton, always load via *get_config*
-
-def is_valid_config_json(rawData):
-    return True
-
-#@memoize
-def has_config_file(configFilename=None):
-    """ quick check for config file existing. """
-    file = configFilename if configFilename else '~/.pypeople'
-    return os.path.isfile(os.path.expanduser(file))
 
 
 def dict_from_vcard(vcard):
@@ -291,29 +282,6 @@ def vcard_merge_in_dict(inDict, vCard):
             vCard.add('org')
         vCard.org.value = inDict['org'] #org is a list?  not well doc'd
 
-def get_config() :
-    """ load config, assuming it exists. If no config, sets
-    some basic values into the global config object """
-    global _g_config
-    if _g_config != None:
-        return _g_config #already loaded, reuse singleton
-
-    cfg_file = '~/.pypeople'
-    if not has_config_file(cfg_file):
-        _g_config = {}
-        _g_config['vcard_dir'] = os.getcwd()
-        _g_config['cfg_file'] = None
-        _g_config['cfg_version'] = __version_info__
-        return _g_config
-    cfg_full = os.path.expanduser(cfg_file)
-    with open(cfg_full, 'rb') as fh:
-        rawdata = fh.read()
-        data = json.loads(rawdata)
-        if is_valid_config_json(data):
-            _g_config = data
-            return _g_config 
-    print("unspecified load config error")
-    return None 
 
 def __help(cmd, *args):
     """Print a help menu for the user"""
@@ -326,12 +294,13 @@ def __help(cmd, *args):
         print('\t'+str(cmd) +':\t ' + helptxt)
 
 def vcard_find(cmd, *args):
-    """Find a nickname based on a name/string/something as part of the vcard"""
+    """Find someone by name/string/something search of vcards"""
     if len(args) == 0: 
         return vcard_find.__doc__
     if len(args) > 0:
         regStr = ' '.join(args)
         config = get_config()
+
         # no options, just print all 
         matches = sets.Set()
         files = glob.glob(config['vcard_dir']+'/*.vcf')
@@ -375,23 +344,23 @@ def vcard_dir_init(cmd, *args):
         print('written')
 
     if not os.path.isdir(config['vcard_dir']):
-       mkdir_p(config['vcard_dir'])
-       print('making new dir for contacts at %s' %config['vcard_dir'])
-       if 'remote' in config.keys():
-	    if config['remote'] == None:
-		raise Exception('config remote is None')
-		
+        mkdir_p(config['vcard_dir'])
+        print('making new dir for contacts at %s' %config['vcard_dir'])
+        if 'remote' in config.keys():
+            if config['remote'] == None:
+                raise Exception('config remote is None')
             elif config['remote'] != None and not os.path.isdir(config['remote']):
-               #no dir exists, do a simple git clone 
                 print("settings vcard dir %s to track git remote %s" 
                       %(config['vcard_dir'], config['remote']))
                 cmd2 = ['git','clone',config['remote'], config['vcard_dir'] ]
                 subprocess.call(cmd2)#FUTURE: make less of a giant os security hole
                 #os.system(cmd2) #FUTURE: make less of a giant os security hole
+                return 'clone attempted'
             else:
                 print("cannot git init an existing dir yet. Sorry :( ")
                 print("directory %s already exists" %config['remote'])
-                return False
+                return 'Failed, no remote specified'
+
                 #FUTURE: be smart, and init over the existing dir anyway
                 #cmd = 'git init ' + config['vcard_dir']
                 #subprocess.call(cmd2)#FUTURE: make less of a giant os security hole
@@ -669,7 +638,7 @@ def add_org(cmd, *args):
     return True
 
 def add_phone(cmd, *args):
-    """phone <nick> <number>:  add phone number string to an existing vcard"""
+    """phone <nick> <number>:  add phone number to an existing vcard"""
 
     config = get_config()
     nick , email = None, None

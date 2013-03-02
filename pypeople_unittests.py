@@ -1,8 +1,34 @@
 #!/usr/bin/env python
 from __future__ import ( unicode_literals, print_function, with_statement, absolute_import )
 
+from pypeople import config
 from pypeople import utils 
 import unittest
+
+class TestConfig(unittest.TestCase):
+    """ Test pypeople/config.py functions and systems"""
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def testGenerateConfig(self):
+        """ tests that git_config will generate a config dict
+         if 'has_config_file' is false """
+        def retFalse(*args, **kwargs):
+            return False
+        orig = config.has_config_file #monkeypatch func used by get_config
+        config.has_config_file = retFalse
+        configDict = config.get_config()
+        config.has_config_file = orig #undo function monkeypatch
+        self.assertTrue('vcard_dir' in configDict)
+        self.assertTrue('cfg_file' in configDict)
+        self.assertTrue('cfg_version' in configDict)
+
+         
+        
 
 class TestBasics(unittest.TestCase):
    
@@ -54,12 +80,12 @@ class TestBasics(unittest.TestCase):
 class VcardListTestCase(unittest.TestCase):
 
     def setUp(self):
-	if utils._g_config is None:
-	    utils._g_config = {}
-        utils._g_config['vcard_dir'] = './tests'
+	if config._g_config is None:
+	    config._g_config = {}
+        config._g_config['vcard_dir'] = './tests'
 
     def tearDown(self):
-	utils._g_config = None 
+	config._g_config = None 
 
     def testBasicList(self):
 	# hardcoded name list
