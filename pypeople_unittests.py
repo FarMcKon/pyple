@@ -51,7 +51,57 @@ class TestBasics(unittest.TestCase):
         #vCard = vCardList[0]
         #ret = utils.dict_from_vcard(vCard)
 
+class VcardListTestCase(unittest.TestCase):
 
+    def setUp(self):
+	if utils._g_config is None:
+	    utils._g_config = {}
+        utils._g_config['vcard_dir'] = './tests'
+
+    def tearDown(self):
+	utils._g_config = None 
+
+    def testBasicList(self):
+	# hardcoded name list
+	ret = utils.vcard_list('list')
+	expected = u'MultiJoHacker,\tBadJoHacker,\tJoHacker,\tMultiInfo'
+	self.assertEqual(ret,expected)
+
+class VcardInitTestCase(unittest.TestCase):
+    FAKE_VCARD_DIR = './fake_vcard_dir'
+
+    def setUp(self):
+	#print('foo')
+	pass	
+
+    def tearDown(self):
+	#print('bar')
+	pass
+
+    def testBasicInitCase(self):
+	import os, stat, shutil
+	def remove_readonly(fn, path,excinfo):
+	    if fn is os.rmdir:
+		os.chmod(path, stat.S_IWRITE)
+		os.rmdir(path)
+	    elif fn is os.remove:
+		os.chmod(path, stat.S_IWRITE)
+		os.remove(path)
+
+	ret = utils.vcard_dir_init( 'init',self.FAKE_VCARD_DIR)
+	# verify our utils directory exists/works/etc and then remove it 
+	self.assertIsNone(ret)
+	self.assertTrue(os.path.isdir(self.FAKE_VCARD_DIR) )
+	#nuke the test dir
+	shutil.rmtree(self.FAKE_VCARD_DIR, onerror=remove_readonly)
+
+
+    
+    def testBasicInitFromRepoCase(self):
+	#self.assertTrue(False,"test case not written")
+	#ret = utils.vcard_dir_init( 'init','./tmp')
+	pass
+	
 class TestAddrParseBasicTestCase(unittest.TestCase):
     """ Basic US address Test Cases"""
     ccCases = [{'src':'1024 Cedar Ave, Phila PA 19143, US',
@@ -76,8 +126,11 @@ class TestAddrParseBasicTestCase(unittest.TestCase):
                        'city': 'St. Paul','state':'MN',
                        'rest':'1020 Fumar St'},
                               ]
-    addrCases = [ "1020 Cedar Ave, Phila PA 13450", 
-                 "1034 Box 20 Chicago, IA, 12350", ]
+    addrCases = [{'src':"1020 Cedar Ave, Phila PA 13450",
+			'city':'Phila','state':'PA','cc':'US','street':'1020 Cedar Ave'},
+                 {'src':"1034 Box 20 Chicago, IA, 12350",
+			'city':'Chicago','state':'IA','street':'1020 Cedar Ave','cc':'US'},
+		]
 
     def setUp(self):
         #print("setup") 
@@ -90,7 +143,7 @@ class TestAddrParseBasicTestCase(unittest.TestCase):
     def testCC(self):
         #print('testing country code removal')
         for case in self.ccCases:
-            test,cc,rest = case['src'], case['cc'],case['rest']
+    	    test,cc,rest = case['src'], case['cc'],case['rest']
 
             ret_rest, ret_cc = utils.shitty_cc_parse(test)
             self.assertEquals(ret_rest, rest )
@@ -115,13 +168,13 @@ class TestAddrParseBasicTestCase(unittest.TestCase):
             self.assertEquals(ret_city, city)
             self.assertEquals(ret_state, state)
 
-    def test_shitty_addr_parser(self):
-        #for case in self.addrCases:
-            #result = utils.shitty_addr_parser(case)
-            #import pdb 
-            #pdb.set_trace()
-            #print (result)
-        pass
+#    def test_shitty_addr_parser(self):
+#        for case in self.addrCases:
+#            result = utils.shitty_addr_parser(case['src'])
+#	    import pdb
+#            pdb.set_trace()
+#	    self.assertEqual(result['cc'],case['cc'])
+#	    self.assertEqual(result['city'],case['city'])
 
 
 if __name__ == '__main__':

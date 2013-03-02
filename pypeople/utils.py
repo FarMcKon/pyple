@@ -53,8 +53,6 @@ def dict_from_vcard(vcard):
         if len(contents[key]) == 0: #hard to test, 
             raise Exception("emtpy vcard key %s" %key)
         if len(contents[key]) > 1:
-            import pdb
-            pdb.set_trace()
             print("WARNING: More than one entry for vcard key %s" %key)
         vCardObj = contents[key][0]
 
@@ -82,12 +80,12 @@ def dict_from_vcard(vcard):
             unpackedData = vCardObj.value
         else:
             print("ohhhh! new datatype. We need to investigate!")
-            import pdb
-            pdb.set_trace()
+            #import pdb
+            #pdb.set_trace()
         #panic if we have no data
         if unpackedData == None:
-            import pdb
-            pdb.set_trace()
+            #import pdb
+            #pdb.set_trace()
             raise Exception("We do not know how to unpack key %s" %key)
 
         #outKey is our output key, it may be remapped
@@ -164,65 +162,74 @@ def shitty_citystate_parse(addrLine):
 
 
 def shitty_addr_parser(addrLine):
-    """shitty address parser. Assumes US always"""
-    shitty_state = '(P<st>\w[.,]?{2}|\w{3,6})'
-    shitty_break = '\s*,?\s+'
-    shitty_city = '(P<city>\w+)' #won't handle St. Foobra, or other cities
-                            #with breaks. Shitty, no? 
-    final_zip = None
-    shitty_zip = '(?P<zip>\d{5})'
-    #FUTURE: pull countrycode off the end
-    #ma = re.compile(shitty_cc + '$') 
-    addrLeft = addrLine
-    ma = re.compile(shitty_zip + '$')
-    grp = ma.search(addrLeft)
-    if grp:
-        final_zip = grp.groupdict['cc']
-        addrLeft = addrLeft[:grp.span()[1]] 
-    else:
-        final_zip = ''
-        #addrLeft unmutilated
+    """shitty address parser. Assumes US always.
+    @returns a dict of {'state','street','city','zip', 'rest'} 
+	for us addresses, where 'rest' is inparsable data
+	a dict with emptry-string
+    """ 
+    retDict = {}
+    addrLeft, cc = shitty_cc_parse(addrLine)
+    retDict['cc']= 'US' if cc == None else cc
 
-    ma = re.compile(shitty_state)
-
-    #shitty_addr_regex = "\s+,?\s+(?P<name>[1-9]{5})"
-    #re.search("(?P<city>\w{2}|\w{3,6})\s+(?P<name>[1-9]{5})",ad).groupdict()
-
-
-
-def shitty_addr_parser(addrLine):
-    """shitty address parser. Assumes US always"""
-    shitty_state = '(?P<st>\s([a-zA-Z][.,]?){2}(\s|,))'
-    shitty_break = '\s*,?\s+'
-    shitty_city = '(?P<city>\w+)' #won't handle St. Foobra, or other cities
-                            #with breaks. Shitty, no? 
-    shitty_zip = '(?P<zip>\d{5})'
-    #FUTURE: pull countrycode off the end
-    #ma = re.compile(shitty_cc + '$') 
-    addrLeft = addrLine
-    ma = re.compile(shitty_zip + '$')
-    grp = ma.search(addrLeft)
-    if grp:
-        final_zip = grp.groupdict()['zip']
-        addrLeft = addrLeft[:grp.span()[0]] 
-    else:
-        final_zip = ''
-        #addrLeft unmutilated
-
-    grp = None
-    ma = re.compile(shitty_state)
-    grp = ma.search(addrLeft)
-    if grp:
-        final_state = grp.groupdict()['st']
-        addrLeft = addrLeft[:grp.span()[0]] 
-        import pdb
-        pdb.set_trace()
-    else:
-        final_state = ''
-
-    shitty_addr_regex = "\s+,?\s+(?P<name>[1-9]{5})"
-    #re.search("(?P<city>\w{2}|\w{3,6})\s+(?P<name>[1-9]{5})",ad).groupdict()
-
+    addrLeft, retDict['zip'] = shitty_zip_parse(addrLeft)
+    addrLeft, retDict['city'],retDict['state'] = shitty_citystate_parse(addrLeft)
+    retDict['street'] = addrLeft
+  
+#    shitty_state = '(?P<st>\s([a-zA-Z][.,]?){2}(\s|,))'
+#    shitty_break = '\s*,?\s+'
+#    shitty_city = '(?P<city>\w+)' #won't handle St. Foobra, or other cities
+#                            #with breaks. Shitty, no? 
+#    shitty_zip = '(?P<zip>\d{5})'
+#    retDict = {} 
+#    #FUTURE: pull countrycode off the end
+#    #ma = re.compile(shitty_cc + '$') 
+#    addrLeft = addrLine
+#    ma = re.compile(shitty_zip + '$')
+#    grp = ma.search(addrLeft)
+#    if grp:
+#        final_zip = grp.groupdict()['zip']
+#        addrLeft = addrLeft[:grp.span()[0]] 
+#    else:
+#        final_zip = ''
+#        #addrLeft unmutilated
+#    retDict['zip'] = final_zip
+#
+#    grp = None
+#    ma = re.compile(shitty_state)
+#    grp = ma.search(addrLeft)
+#    if grp:
+#        final_state = grp.groupdict()['st']
+#        addrLeft = addrLeft[:grp.span()[0]] 
+#    else:
+#        final_state = ''
+#    retDict['state'] = final_state
+#
+#    grp = None
+#    shitty_addr_regex = "(?P<street>.*?)(?=\s?,)"
+#    ma = re.compile(shitty_addr_regex)
+#    grp = ma.search(addrLeft)
+#    if grp:
+#	final_street= grp.groupdict()['street']
+#	addrLeft = addrLeft[grp.span()[1]:]
+#    else:
+#	final_street = ''
+#    retDict['street'] = final_street
+#
+#    grp = None
+#    shitty_addr_regex = ",\s*(?P<city>\S+)(\s|\w)"
+#    ma = re.compile(shitty_addr_regex)
+#    grp = ma.search(addrLeft)
+#    if grp:
+#	final_city= grp.groupdict()['city']
+#	addrLeft = addrLeft[:grp.span()[0]]
+#    else:
+#	final_city= ''
+#    retDict['city'] = final_city
+#
+#    retDict['rest'] = addrLeft
+#    return retDict 
+#  #re.search("(?P<city>\w{2}|\w{3,6})\s+(?P<name>[1-9]{5})",ad).groupdict()
+#
 
 def vcard_merge_in_dict(inDict, vCard):
     """ merges a well-specified dictionary of data into the passed v-card"""
@@ -338,22 +345,22 @@ def vcard_find(cmd, *args):
         return  ',\t'.join(matches)
                     
 def vcard_dir_init(cmd, *args):
-    """Create/Update a config file. 'init <dir_of_vcard> [remote git repo]' """
-    # Returns a string of success/result for the user
-    print('init (aka %s) called with %s' %(cmd, args) )
+    """Create/Update a config file. 'init <dir_of_vfc> [remote repo]' """
+    #print('init (aka %s) called with %s' %(cmd, args) )
     dir, remote = None, None
     if len(args) == 0:
-        return vcard_dir_init.__doc__ 
-        #'initalize in dir, pulling from remote_repo as needed '
-    if len(args) > 0:  
+        print(vcard_dir_init.__doc__)
+        print('initalize in dir, pulling from remote_repo as needed ')
+        return False
+    if len(args) > 0:  #target init dir
         dir = args[0]
-    if len(args) > 1:
+    if len(args) > 1: # source repo if cloning
         remote = args[1]
+
     if len(args) > 2:
         print ("too many params for init!")
         return False
     config = get_config()
-    import os
     config['vcard_dir'] = os.path.abspath(os.path.expanduser(dir))
     config['cfg_file'] = os.path.abspath(os.path.expanduser('~/.pypeople'))
     config['cfg_version'] = __version_info__
@@ -371,7 +378,10 @@ def vcard_dir_init(cmd, *args):
        mkdir_p(config['vcard_dir'])
        print('making new dir for contacts at %s' %config['vcard_dir'])
        if 'remote' in config.keys():
-            if not os.path.isdir(config['remote']):
+	    if config['remote'] == None:
+		raise Exception('config remote is None')
+		
+            elif config['remote'] != None and not os.path.isdir(config['remote']):
                #no dir exists, do a simple git clone 
                 print("settings vcard dir %s to track git remote %s" 
                       %(config['vcard_dir'], config['remote']))
@@ -454,7 +464,7 @@ def vcard_list(cmd, *args):
     nicks = [fname[len(config['vcard_dir'])+1:-4] for fname in files]
     strRet = u''
     if len(args) == 0 : 
-       strRet +  ',\t'.join(nicks) 
+       strRet = ',\t'.join(nicks) 
     elif len(args) > 0:
         if args[0] == '--help':
             strRet + vcard_list.__doc__
