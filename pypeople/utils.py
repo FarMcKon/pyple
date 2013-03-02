@@ -10,11 +10,14 @@ import json
 import vobject
 import re
 import errno
+import sets
+
 
 #version, in the 3 main version formats
 __version_info__ = [0,6,2,4]
 __version__ = '0.6.2,4'
 VERSION = '0.6.2,4'
+
 # ^ For reasons specified elsewhere, this is done. Please don't get smart, it breaks
 # some dependencies and it breaks setup.py
 if __version__ != VERSION and VERSION != '.'.join([str(x) for x in __version_info__]):
@@ -317,16 +320,13 @@ def __help(cmd, *args):
 
 def vcard_find(cmd, *args):
     """Find a nickname based on a name/string/something as part of the vcard"""
-    if len(args) == 0:
-        print(vcard_find.__doc__)
-        return
+    if len(args) == 0: 
+        return vcard_find.__doc__
     if len(args) > 0:
-        import pdb
-        pdb.set_trace()
         regStr = ' '.join(args)
         config = get_config()
         # no options, just print all 
-        matches = []
+        matches = sets.Set()
         files = glob.glob(config['vcard_dir']+'/*.vcf')
         for f in files:
             with open(f, "r") as fh:
@@ -334,19 +334,17 @@ def vcard_find(cmd, *args):
                 match = re.search(re.escape(regStr), data,re.IGNORECASE)
                 if match != None:
                     nick = f[len(config['vcard_dir'])+1:-4] #strip dir portions
-                    print(nick)
-                    matches.append(nick)
-            
-        print( ',\t'.join(matches) )
+                    matches.add(nick)
+        return  ',\t'.join(matches)
                     
 def vcard_dir_init(cmd, *args):
-    """Create/Update a config file. 'init <dir_of_vfc> [remote repo]' """
+    """Create/Update a config file. 'init <dir_of_vcard> [remote git repo]' """
+    # Returns a string of success/result for the user
     print('init (aka %s) called with %s' %(cmd, args) )
     dir, remote = None, None
     if len(args) == 0:
-        print(vcard_dir_init.__doc__)
-        print('initalize in dir, pulling from remote_repo as needed ')
-        return False
+        return vcard_dir_init.__doc__ 
+        #'initalize in dir, pulling from remote_repo as needed '
     if len(args) > 0:  
         dir = args[0]
     if len(args) > 1:
@@ -400,23 +398,28 @@ def cd_vcard_dir():
 
 def vcard_dir_sync(cmd, *args):
     """ sync our vcard file to our remote repo (if one exists) """
-
-    if len(args) == 0:    print( vcard_dir_sync.__doc__)
+    #if len(args) == 0:    print( vcard_dir_sync.__doc__) #no options for sync, just run it
     if len(args) >= 1:    
-        print("sync param %s not understood" %args)
-
+        print("attempt to sync param %s not understood" %args)
+    
     config = get_config()
     if 'remote' in config.keys() and config['remote'] != None:
+        local_base = 'unknown'
+        if 'vcard_dir' in config:
+            local_base = config['vcard_dir']
+        print("*****\n\tlocal dir:%s\n\tto remote:%s" %(os.path.expanduser(local_base), config['remote']) )
         oldcwd = cd_vcard_dir()
+        # PULL! 
         cmd = ['git','pull' ]
-        #os.system(cmd)
+        subprocess.call(cmd)
+
         #add all vcf files
         files = glob.glob(config['vcard_dir']+'/*.vcf')
         cmd = ['git','add']
         cmd.extend(files)
         subprocess.call(cmd)
-        #os.system(cmd)
-        #make with the push
+
+        ##make with the push
         import datetime
         dtString = str(datetime.datetime.now())
         cmd = ['git','commit','--message="pypeople v%s autocommit on %s"' %(__version__, dtString)]
@@ -792,9 +795,30 @@ def add_contact(cmd, *args):
     #x = vobject.vCard()
     # x.name = 'Foo'
 
+availSubCmds = {
+    'list': vcard_list,
+    'init': vcard_dir_init,
+    'add': add_contact,
+    'addr': add_addr,
+    'rm':  vcard_rm,
+    'mv': vcard_mv,
+    'name': undefined,
+    'whois': whois,
+    'rename': undefined,
+    'email': add_email,
+    'phone': add_phone,
+    'bday': undefined,
+    'org': add_org,
+    'help':  __help,
+    'sync':vcard_dir_sync,
+    'find':vcard_find,
+}
 
+ 
 if __name__ == '__main__':
     #print('main')
+    main() 
+def main(): 
     caller = None
     subCmd = 'help'
     cmdRest = []
@@ -805,25 +829,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         cmdRest = sys.argv[2:]
 
-    availSubCmds = {
-        'list': vcard_list,
-        'init': vcard_dir_init,
-        'add': add_contact,
-        'addr': add_addr,
-        'rm':  vcard_rm,
-        'mv': vcard_mv,
-        'name': undefined,
-        'whois': whois,
-        'rename': undefined,
-        'email': add_email,
-        'phone': add_phone,
-        'bday': undefined,
-        'org': add_org,
-        'help':  __help,
-        'sync':vcard_dir_sync,
-        'find':vcard_find,
-    }
-    
 
     if subCmd in availSubCmds.keys():
         if (availSubCmds[subCmd] != None):

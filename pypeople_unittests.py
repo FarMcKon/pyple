@@ -116,11 +116,12 @@ class TestAddrParseBasicTestCase(unittest.TestCase):
             self.assertEquals(ret_state, state)
 
     def test_shitty_addr_parser(self):
-        for case in self.addrCases:
-            result = utils.shitty_addr_parser(case)
-            import pdb 
-            pdb.set_trace()
-            print (result)
+        #for case in self.addrCases:
+            #result = utils.shitty_addr_parser(case)
+            #import pdb 
+            #pdb.set_trace()
+            #print (result)
+        pass
 
 
 if __name__ == '__main__':
