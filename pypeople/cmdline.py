@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-from __future__ import ( unicode_literals, print_function, with_statement, absolute_import )
+from __future__ import (
+    unicode_literals, print_function, with_statement, absolute_import)
 """ Command line tools for/from pypeople """
 
 import sys
 import utils
 
 
-def main(*args,**kwargs):
+def main(*args, **kwargs):
     """ main function for command line pypeople tool. """
-    calledVia= None
+    calledVia = None
     command = 'help'
     cmdOpts = []
     if len(sys.argv) > 0:
@@ -19,6 +20,3 @@ def main(*args,**kwargs):
         cmdOpts = sys.argv[2:]
     returnString = utils.try_command(command, cmdOpts)
     print(returnString)
-
-
-

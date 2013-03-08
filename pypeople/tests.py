@@ -12,8 +12,8 @@
 #        g_config['cfg_file'] = None
 #        self.old_cfg = pypeople._g_config
 #        pypeople._g_config = g_config
-#               
-#        
+#
+#
 #
 #
 #    def testList(self):
@@ -31,7 +31,7 @@
 #            self.assertTrue(True)
 #        else:
 #            self.assertFalse(True)
-# 
+#
 #
 #if __name__ == '__main__':
 #    unittest.main()

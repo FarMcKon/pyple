@@ -1,9 +1,10 @@
-from __future__ import ( unicode_literals, print_function, with_statement, absolute_import )
+from __future__ import (
+    unicode_literals, print_function, with_statement, absolute_import)
 import os
 import json
 
 """
-pypepope/config.py 
+pypepope/config.py
 Contains tools for pypeople configuration. The pypeople configuration attempts
 to load from ~/.pypeople file first. If that does not exist, config assumes
 the current directory to be the vcard_directory, and saves no config file
@@ -14,10 +15,11 @@ config dict contains 3 values:
     cfg_file_version: the version of vcard the config file is from/for
 """
 
-_g_config = None # internal singleton, always load via configs via *get_config()*
+_g_config = None  # internal singleton, always load via configs via *get_config()*
+
 
 def is_valid_config_json(rawData):
-    return True #TODO: make a real json test here someday
+    return True  # TODO: make a real json test here someday
 
 
 def has_config_file(configFilename='~/.pypeople'):
@@ -26,13 +28,14 @@ def has_config_file(configFilename='~/.pypeople'):
         configFilename = '~/.pypeople'
     return os.path.isfile(os.path.expanduser(configFilename))
 
-def get_config() :
+
+def get_config():
     """ load config, assuming it exists. If no config, sets
     some basic values into the global config object """
     global _g_config
-    if _g_config != None:
+    if _g_config is not None:
         logging.debug("reusing singleton config")
-        return _g_config #already loaded, reuse singleton
+        return _g_config  # already loaded, reuse singleton
 
     cfg_file = '~/.pypeople'
     if not has_config_file(cfg_file):
@@ -48,8 +51,7 @@ def get_config() :
         data = json.loads(rawdata)
         if is_valid_config_json(data):
             _g_config = data
-            return _g_config 
+            return _g_config
 
     print("unspecified load config error")
-    return None 
-
+    return None
